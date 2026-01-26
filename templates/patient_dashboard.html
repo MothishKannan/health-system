@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-user-injured text-primary"></i> Patient Dashboard
+        </h2>
+    </div>
+</div>
+
+<!-- Emergency Button -->
+<div class="row mb-4">
+    <div class="col-12">
+        <button class="btn btn-danger btn-lg w-100" id="emergencyBtn">
+            <i class="fas fa-exclamation-triangle fa-beat"></i> EMERGENCY HELP NEEDED
+        </button>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-pills fa-2x text-primary mb-2"></i>
+                <h5>{{ medicines|length }}</h5>
+                <small class="text-muted">Active Medicines</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h5>{{ medicine_logs|selectattr('status', 'equalto', 'taken')|list|length }}</h5>
+                <small class="text-muted">Taken Today</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                <h5>{{ medicine_logs|selectattr('status', 'equalto', 'pending')|list|length }}</h5>
+                <small class="text-muted">Pending</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-user-nurse fa-2x text-info mb-2"></i>
+                <h5>{% if patient.caretaker %}Yes{% else %}No{% endif %}</h5>
+                <small class="text-muted">Caretaker Assigned</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Medicine Schedule -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-day"></i> Today's Medicine Schedule</h5>
+            </div>
+            <div class="card-body">
+                {% if medicine_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Medicine</th>
+                                    <th>Dosage</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in medicine_logs %}
+                                <tr class="{% if log.status == 'taken' %}table-success{% elif log.status == 'missed' %}table-danger{% endif %}">
+                                    <td>{{ log.scheduled_time.strftime('%I:%M %p') }}</td>
+                                    <td>{{ log.medicine.name }}</td>
+                                    <td>{{ log.medicine.dosage }}</td>
+                                    <td>
+                                        {% if log.status == 'taken' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Taken
+                                            </span>
+                                        {% elif log.status == 'missed' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times"></i> Missed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.status == 'pending' %}
+                                            <button class="btn btn-sm btn-success mark-taken" data-log-id="{{ log.id }}">
+                                                <i class="fas fa-check"></i> Mark Taken
+                                            </button>
+                                        {% elif log.status == 'taken' %}
+                                            <small class="text-muted">
+                                                {{ log.taken_time.strftime('%I:%M %p') }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No medicines scheduled for today.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Your Medicines -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-pills"></i> Your Medicines</h5>
+            </div>
+            <div class="card-body">
+                {% if medicines %}
+                    <div class="row">
+                        {% for medicine in medicines %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ medicine.name }}</h5>
+                                    <p class="card-text">
+                                        <strong>Dosage:</strong> {{ medicine.dosage }}<br>
+                                        <strong>Frequency:</strong> {{ medicine.frequency }}<br>
+                                        <strong>Remaining:</strong> 
+                                        <span class="{% if medicine.quantity_remaining <= 5 %}text-danger{% endif %}">
+                                            {{ medicine.quantity_remaining }} tablets
+                                        </span>
+                                    </p>
+                                    {% if medicine.instructions %}
+                                    <p class="text-muted"><em>{{ medicine.instructions }}</em></p>
+                                    {% endif %}
+                                    
+                                    {% if medicine.quantity_remaining <= 10 %}
+                                    <button class="btn btn-warning btn-sm reorder-btn" data-medicine-id="{{ medicine.id }}">
+                                        <i class="fas fa-shopping-cart"></i> Request Refill
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No medicines prescribed yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Link -->
+<div class="row">
+    <div class="col-12 text-center">
+        <a href="{{ url_for('patient_profile') }}" class="btn btn-outline-primary">
+            <i class="fas fa-user-edit"></i> Update Profile
+        </a>
+    </div>
+</div>
+
+<!-- Emergency Modal -->
+<div class="modal fade" id="emergencyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Emergency Help</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This will send an immediate alert to your caretaker.</p>
+                <div class="mb-3">
+                    <label for="emergencyMessage" class="form-label">Message (Optional):</label>
+                    <textarea class="form-control" id="emergencyMessage" rows="3" placeholder="Describe your emergency..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmEmergency">
+                    <i class="fas fa-ambulance"></i> Send Alert
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reorder Modal -->
+<div class="modal fade" id="reorderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-shopping-cart"></i> Request Medicine Refill</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="reorderQuantity" class="form-label">Quantity:</label>
+                    <input type="number" class="form-control" id="reorderQuantity" value="30" min="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmReorder">
+                    Request Refill
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentMedicineId = null;
+    
+    // Emergency button
+    $('#emergencyBtn').click(function() {
+        $('#emergencyModal').modal('show');
+    });
+    
+    // Confirm emergency
+    $('#confirmEmergency').click(function() {
+        const message = $('#emergencyMessage').val() || 'Emergency help needed!';
+        
+        fetch('/patient/emergency', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#emergencyModal').modal('hide');
+                alert('Emergency alert sent to your caretaker!');
+                $('#emergencyMessage').val('');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    });
+    
+    // Mark medicine as taken
+    $('.mark-taken').click(function() {
+        const logId = $(this).data('log-id');
+        
+        fetch(`/patient/medicine/${logId}/taken`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    });
+    
+    // Reorder medicine
+    $('.reorder-btn').click(function() {
+        currentMedicineId = $(this).data('medicine-id');
+        $('#reorderModal').modal('show');
+    });
+    
+    $('#confirmReorder').click(function() {
+        const quantity = $('#reorderQuantity').val();
+        
+        fetch(`/patient/reorder/${currentMedicineId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ quantity: parseInt(quantity) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#reorderModal').modal('hide');
+                alert(data.message);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    });
+</script>
+{% endblock %}

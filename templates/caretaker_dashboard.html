@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Caretaker Dashboard{% endblock %}
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-user-nurse text-success"></i> Caretaker Dashboard</h2>
+
+<!-- Emergency Alerts -->
+{% if emergency_alerts %}
+<div class="alert alert-danger">
+    <h5><i class="fas fa-exclamation-triangle"></i> Active Emergency Alerts ({{ emergency_alerts|length }})</h5>
+    {% for alert in emergency_alerts %}
+    <div class="card mb-2">
+        <div class="card-body">
+            <strong>Patient:</strong> {{ alert.patient.user.name }}<br>
+            <strong>Message:</strong> {{ alert.message }}<br>
+            <strong>Time:</strong> {{ alert.created_at.strftime('%I:%M %p') }}
+            <div class="mt-2">
+                <button class="btn btn-sm btn-warning ack-emergency" data-alert-id="{{ alert.id }}">Acknowledge</button>
+                <button class="btn btn-sm btn-success resolve-emergency" data-alert-id="{{ alert.id }}">Resolve</button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-3"><a href="{{ url_for('add_patient') }}" class="btn btn-primary w-100"><i class="fas fa-user-plus"></i> Add Patient</a></div>
+    <div class="col-md-3"><a href="{{ url_for('consult_doctor') }}" class="btn btn-info w-100"><i class="fas fa-stethoscope"></i> Consult Doctor</a></div>
+    <div class="col-md-3"><a href="{{ url_for('order_from_medical_shop') }}" class="btn btn-success w-100"><i class="fas fa-shopping-cart"></i> Medical Shop</a></div>
+    <div class="col-md-3"><span class="btn btn-outline-secondary w-100">{{ patients|length }}/7 Patients</span></div>
+</div>
+
+<!-- Reorder Requests -->
+{% if reorder_requests %}
+<div class="card mb-4">
+    <div class="card-header bg-warning"><h5>Medicine Reorder Requests</h5></div>
+    <div class="card-body">
+        {% for req in reorder_requests %}
+        <div class="card mb-2">
+            <div class="card-body">
+                <strong>Patient:</strong> {{ req.patient.user.name }}<br>
+                <strong>Medicine:</strong> {{ req.medicine.name }} ({{ req.quantity }} tablets)
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-primary process-reorder" data-reorder-id="{{ req.id }}" data-action="ordered">Mark Ordered</button>
+                    <button class="btn btn-sm btn-success process-reorder" data-reorder-id="{{ req.id }}" data-action="delivered">Mark Delivered</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Patients List -->
+<div class="card">
+    <div class="card-header bg-success text-white"><h5>Your Patients</h5></div>
+    <div class="card-body">
+        {% if patients %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>{{ patient.user.name }}</td>
+                        <td>{{ patient.user.email }}</td>
+                        <td>{{ patient.user.phone or 'N/A' }}</td>
+                        <td>
+                            <a href="{{ url_for('view_patient', patient_id=patient.id) }}" class="btn btn-sm btn-info">View</a>
+                            <a href="{{ url_for('add_medicine', patient_id=patient.id) }}" class="btn btn-sm btn-success">Add Medicine</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted">No patients assigned yet. <a href="{{ url_for('add_patient') }}">Add a patient</a></p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$('.ack-emergency').click(function() {
+    const alertId = $(this).data('alert-id');
+    fetch(`/caretaker/emergency/${alertId}/acknowledge`, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if(d.success) location.reload(); });
+});
+
+$('.resolve-emergency').click(function() {
+    const alertId = $(this).data('alert-id');
+    fetch(`/caretaker/emergency/${alertId}/resolve`, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if(d.success) location.reload(); });
+});
+
+$('.process-reorder').click(function() {
+    const reorderId = $(this).data('reorder-id');
+    const action = $(this).data('action');
+    fetch(`/caretaker/reorder/${reorderId}/process`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action})
+    }).then(r => r.json()).then(d => { if(d.success) location.reload(); });
+});
+</script>
+{% endblock %}

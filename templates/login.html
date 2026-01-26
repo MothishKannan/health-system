@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Healthcare Management System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="text-center mb-4">Login to Your Account</h2>
+        
+        <div class="row">
+            <!-- Patient Login -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white text-center">
+                        <h4><i class="fas fa-user-injured"></i> Patient Login</h4>
+                    </div>
+                    <div class="card-body text-center">
+                        <p class="mb-4">Login as a patient to manage your medicines and health.</p>
+                        <div id="patient-google-signin" class="google-signin-button"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Caretaker Login -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white text-center">
+                        <h4><i class="fas fa-user-nurse"></i> Caretaker Login</h4>
+                    </div>
+                    <div class="card-body text-center">
+                        <p class="mb-4">Login as a caretaker to monitor and manage patients.</p>
+                        <div id="caretaker-google-signin" class="google-signin-button"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Google Sign-In -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+    // Google Client ID from your environment
+    const GOOGLE_CLIENT_ID = "{{ config.GOOGLE_CLIENT_ID }}";
+    
+    window.onload = function() {
+        // Initialize Google Sign-In for Patient
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handlePatientCredentialResponse
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById("patient-google-signin"),
+            { 
+                theme: "outline", 
+                size: "large",
+                text: "signin_with",
+                width: 250
+            }
+        );
+        
+        // Initialize Google Sign-In for Caretaker
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCaretakerCredentialResponse
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById("caretaker-google-signin"),
+            { 
+                theme: "outline", 
+                size: "large",
+                text: "signin_with",
+                width: 250
+            }
+        );
+    }
+    
+    // Handle patient login
+    function handlePatientCredentialResponse(response) {
+        handleCredentialResponse(response, 'patient');
+    }
+    
+    // Handle caretaker login
+    function handleCaretakerCredentialResponse(response) {
+        handleCredentialResponse(response, 'caretaker');
+    }
+    
+    // Common login handler
+    function handleCredentialResponse(response, userType) {
+        fetch('/auth/google', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                credential: response.credential,
+                user_type: userType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                alert('Login failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred during login');
+        });
+    }
+</script>
+{% endblock %}

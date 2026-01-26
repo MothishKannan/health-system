@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Add Medicine{% endblock %}
+{% block content %}
+<h2>Add Medicine for {{ patient.user.name }}</h2>
+<form method="POST">
+    <div class="mb-3"><label>Medicine Name</label><input type="text" name="name" class="form-control" required></div>
+    <div class="mb-3"><label>Dosage</label><input type="text" name="dosage" class="form-control" placeholder="e.g., 500mg" required></div>
+    <div class="mb-3"><label>Frequency</label><input type="text" name="frequency" class="form-control" placeholder="e.g., 3 times daily" required></div>
+    <div class="mb-3"><label>Time Slots (JSON array)</label><input type="text" name="time_slots" class="form-control" placeholder='["08:00", "14:00", "20:00"]' required></div>
+    <div class="mb-3"><label>Start Date</label><input type="date" name="start_date" class="form-control" required></div>
+    <div class="mb-3"><label>End Date</label><input type="date" name="end_date" class="form-control"></div>
+    <div class="mb-3"><label>Quantity</label><input type="number" name="quantity" class="form-control" value="30"></div>
+    <div class="mb-3"><label>Instructions</label><textarea name="instructions" class="form-control" rows="3"></textarea></div>
+    <button type="submit" class="btn btn-primary">Add Medicine</button>
+    <a href="{{ url_for('view_patient', patient_id=patient.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

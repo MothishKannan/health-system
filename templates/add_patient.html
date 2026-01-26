@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Add Patient{% endblock %}
+{% block content %}
+<h2>Add New Patient</h2>
+<p>Enter the email address of the patient you want to add. They must have already registered as a patient.</p>
+<form method="POST">
+    <div class="mb-3">
+        <label for="patient_email" class="form-label">Patient Email</label>
+        <input type="email" class="form-control" id="patient_email" name="patient_email" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Patient</button>
+    <a href="{{ url_for('caretaker_dashboard') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

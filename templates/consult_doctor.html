@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Consult Doctor{% endblock %}
+{% block content %}
+<h2>Consult with Doctor</h2>
+{% if caretaker.doctor %}
+<p><strong>Your Doctor:</strong> {{ caretaker.doctor.name }} ({{ caretaker.doctor.specialization }})</p>
+{% endif %}
+<form method="POST" class="mb-4">
+    <div class="mb-3"><label>Select Patient (Optional)</label><select name="patient_id" class="form-control"><option value="">General Question</option>{% for p in patients %}<option value="{{ p.id }}">{{ p.user.name }}</option>{% endfor %}</select></div>
+    <div class="mb-3"><label>Message</label><textarea name="message" class="form-control" rows="5" required></textarea></div>
+    <button type="submit" class="btn btn-primary">Send Consultation</button>
+</form>
+<h4>Previous Consultations</h4>
+{% if consultations %}
+{% for c in consultations %}
+<div class="card mb-2"><div class="card-body"><strong>Status:</strong> {{ c.status }}<br><strong>Question:</strong> {{ c.message }}{% if c.response %}<br><strong>Response:</strong> {{ c.response }}{% endif %}</div></div>
+{% endfor %}
+{% else %}
+<p>No consultations yet.</p>
+{% endif %}
+{% endblock %}
