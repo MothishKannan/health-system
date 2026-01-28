@@ -398,25 +398,51 @@ def add_medicine(patient_id):
         return redirect(url_for('caretaker_dashboard'))
     
     if request.method == 'POST':
-        medicine = Medicine(
-            patient_id=patient.id,
-            name=request.form.get('name'),
-            dosage=request.form.get('dosage'),
-            frequency=request.form.get('frequency'),
-            time_slots=request.form.get('time_slots'),  # JSON string
-            start_date=datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date(),
-            end_date=datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date() if request.form.get('end_date') else None,
-            quantity_remaining=int(request.form.get('quantity', 30)),
-            instructions=request.form.get('instructions')
-        )
-        db.session.add(medicine)
-        db.session.commit()
-        
-        # Create medicine logs for upcoming doses
-        create_medicine_logs(medicine)
-        
-        flash('Medicine added successfully!', 'success')
-        return redirect(url_for('view_patient', patient_id=patient_id))
+        try:
+            # Get form data
+            name = request.form.get('name')
+            dosage = request.form.get('dosage')
+            frequency = request.form.get('frequency')
+            time_slots = request.form.get('time_slots')
+            start_date_str = request.form.get('start_date')
+            end_date_str = request.form.get('end_date')
+            quantity = request.form.get('quantity', 30)
+            instructions = request.form.get('instructions')
+            
+            # Parse dates
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+            
+            # Create medicine
+            medicine = Medicine(
+                patient_id=patient.id,
+                name=name,
+                dosage=dosage,
+                frequency=frequency,
+                time_slots=time_slots,
+                start_date=start_date,
+                end_date=end_date,
+                quantity_remaining=int(quantity),
+                instructions=instructions
+            )
+            db.session.add(medicine)
+            db.session.commit()
+            
+            # Create medicine logs
+            try:
+                create_medicine_logs(medicine)
+            except Exception as log_error:
+                print(f"Error creating logs: {log_error}")
+                # Continue even if log creation fails
+            
+            flash('Medicine added successfully!', 'success')
+            return redirect(url_for('view_patient', patient_id=patient_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error adding medicine: {e}")
+            flash(f'Error adding medicine: {str(e)}', 'danger')
+            return redirect(url_for('add_medicine', patient_id=patient_id))
     
     return render_template('add_medicine.html', patient=patient)
 
@@ -570,31 +596,48 @@ def create_medicine_logs(medicine):
     if not medicine.time_slots:
         return
     
-    time_slots = json.loads(medicine.time_slots)
+    try:
+        time_slots = json.loads(medicine.time_slots)
+    except Exception as e:
+        print(f"Error parsing time slots: {medicine.time_slots}, Error: {e}")
+        return
+    
     today = datetime.now().date()
     
     # Create logs for next 7 days
     for day in range(7):
         schedule_date = today + timedelta(days=day)
         
+        # Check if schedule date is before medicine start date
+        if schedule_date < medicine.start_date:
+            continue
+            
         # Check if within medicine date range
         if medicine.end_date and schedule_date > medicine.end_date:
             break
         
         for time_slot in time_slots:
-            hour, minute = map(int, time_slot.split(':'))
-            scheduled_time = datetime.combine(schedule_date, datetime.min.time().replace(hour=hour, minute=minute))
-            
-            # Don't create logs for past times
-            if scheduled_time > datetime.now():
-                log = MedicineLog(
-                    patient_id=medicine.patient_id,
-                    medicine_id=medicine.id,
-                    scheduled_time=scheduled_time
-                )
-                db.session.add(log)
+            try:
+                hour, minute = map(int, time_slot.split(':'))
+                scheduled_time = datetime.combine(schedule_date, datetime.min.time().replace(hour=hour, minute=minute))
+                
+                # Don't create logs for past times
+                if scheduled_time > datetime.now():
+                    log = MedicineLog(
+                        patient_id=medicine.patient_id,
+                        medicine_id=medicine.id,
+                        scheduled_time=scheduled_time
+                    )
+                    db.session.add(log)
+            except Exception as e:
+                print(f"Error creating log for time slot {time_slot}: {e}")
+                continue
     
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        print(f"Error committing logs: {e}")
+        db.session.rollback()
 
 
 # ==================== DATABASE INITIALIZATION ====================
